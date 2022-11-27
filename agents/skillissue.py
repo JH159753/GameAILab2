@@ -7,13 +7,14 @@ def format_hint(h):
     if h == HINT_COLOR:
         return "color"
     return "rank"
-        
+
 class SkillIssuePlayer(agent.Agent):
     def __init__(self, name, pnr):
         self.name = name
         self.hints = {}
         self.pnr = pnr
         self.explanation = []
+
     def get_action(self, nr, hands, knowledge, trash, played, board, valid_actions, hints, hits, cards_left):
         for player,hand in enumerate(hands):
             for card_index,_ in enumerate(hand):
@@ -32,6 +33,11 @@ class SkillIssuePlayer(agent.Agent):
         for i,k in enumerate(my_knowledge):
             if util.is_playable(k, board):
                 return Action(PLAY, card_index=i)
+
+            #if util.maybe_playable(k, board):
+            #    if (util.probability(util.playable(board), k) >= 0 and hits < 2):
+            #        return Action(PLAY, card_index=i)
+
             if util.is_useless(k, board):    
                 potential_discards.append(i)
                 
@@ -78,7 +84,11 @@ class SkillIssuePlayer(agent.Agent):
  
         if hints > 0:
             hints = util.filter_actions(HINT_COLOR, valid_actions) + util.filter_actions(HINT_RANK, valid_actions)
+            
+            #this will give one of the hints inside the list of possible things to hint.
+            
             hintgiven = random.choice(hints)
+
             if hintgiven.type == HINT_COLOR:
                 for i,card in enumerate(hands[hintgiven.player]):
                     if card.color == hintgiven.color:
@@ -90,7 +100,87 @@ class SkillIssuePlayer(agent.Agent):
                 
             return hintgiven
 
-        return random.choice(util.filter_actions(DISCARD, valid_actions))
+        
+
+
+        #for i,k in enumerate(my_knowledge):
+        #    print(k)
+        
+        
+        #print(board)
+
+        
+
+        #if it could be a value that's useful, it goes into num
+        nums = [0, 0, 0, 0, 0]
+        #if it could be a value, it goes into denom
+        denoms = [0, 0, 0, 0, 0]
+
+
+        #For each card:
+        cardIndex = 0
+        for i in my_knowledge:
+            
+            #print(my_knowledge[cardIndex])
+            #print(cardIndex)
+            #for the colors in the card:
+            colorIndex = 0
+            for j in i: 
+                #print(my_knowledge[cardIndex][colorIndex])
+                cardOnBoard = board[colorIndex][1]
+                
+                #print(cardOnBoard)
+                
+                
+                for k in j:
+                    denoms[cardIndex] = denoms[cardIndex] + k
+                    if cardOnBoard < k:
+                        nums[cardIndex] = nums[cardIndex] + k
+                #print("num is: ")
+                #print(nums)
+                #print("denom is ")
+                #print(denoms)
+                colorIndex = colorIndex + 1
+                    
+            cardIndex = cardIndex + 1
+        
+        #print("num is: ")
+        #print(nums)
+        #print("denom is ")
+        #print(denoms)
+        totals = [0.0, 0.0, 0.0, 0.0, 0.0]
+
+        #doing it like this because idk why python wouldn't accept the other way
+        i = 0
+        for total in totals:
+            totals[i] = totals[i] + nums[i] / denoms[i]
+
+            i = i + 1
+                
+        #print(totals)
+
+        index = 0
+        i = 0
+        max = 50
+        for denom in denoms:
+            if max <= denom:
+                index = i
+                max = denom
+            i = i + 1
+        #print(max)
+        #print(index)
+
+        possibleDiscards = util.filter_actions(DISCARD, valid_actions)
+
+        return possibleDiscards[index]
+
+
+            
+
+                    
+                    
+
+        
 
     def inform(self, action, player):
         if action.type in [PLAY, DISCARD]:
@@ -100,5 +190,7 @@ class SkillIssuePlayer(agent.Agent):
                 if (player,action.card_index+i+1) in self.hints:
                     self.hints[(player,action.card_index+i)] = self.hints[(player,action.card_index+i+1)]
                     self.hints[(player,action.card_index+i+1)] = set()
+
+    
 
 agent.register("skill", "Skill Issue Player", SkillIssuePlayer)
